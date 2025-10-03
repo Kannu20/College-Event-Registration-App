@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, CreditCard as Edit2, Trash2, Users } from 'lucide-react';
+import { Plus, Edit2, Trash2, Users } from 'lucide-react';
 import { Event, Registration } from '../types';
 
 interface AdminPanelProps {
