@@ -1,32 +1,103 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Shield, Users } from 'lucide-react';
 import AdminPanel from './components/AdminPanel';
 import StudentView from './components/StudentView';
 import { Event, Registration } from './types';
+import { supabase } from './lib/supabase';
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleAddEvent = (eventData: Omit<Event, 'id'>) => {
-    const newEvent: Event = {
-      id: crypto.randomUUID(),
-      ...eventData
+  useEffect(() => {
+    fetchEvents();
+    fetchRegistrations();
+
+    const eventsChannel = supabase
+      .channel('events-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+        fetchEvents();
+      })
+      .subscribe();
+
+    const registrationsChannel = supabase
+      .channel('registrations-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'registrations' }, () => {
+        fetchRegistrations();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(eventsChannel);
+      supabase.removeChannel(registrationsChannel);
     };
-    setEvents([...events, newEvent]);
+  }, []);
+
+  const fetchEvents = async () => {
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .order('event_date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching events:', error);
+    } else {
+      setEvents(data || []);
+    }
+    setLoading(false);
   };
 
-  const handleUpdateEvent = (id: string, eventData: Omit<Event, 'id'>) => {
-    setEvents(events.map(event => event.id === id ? { ...eventData, id } : event));
+  const fetchRegistrations = async () => {
+    const { data, error } = await supabase
+      .from('registrations')
+      .select('*')
+      .order('registered_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching registrations:', error);
+    } else {
+      setRegistrations(data || []);
+    }
   };
 
-  const handleDeleteEvent = (id: string) => {
-    setEvents(events.filter(event => event.id !== id));
-    setRegistrations(registrations.filter(reg => reg.event_id !== id));
+  const handleAddEvent = async (eventData: Omit<Event, 'id'>) => {
+    const { error } = await supabase
+      .from('events')
+      .insert([eventData]);
+
+    if (error) {
+      console.error('Error adding event:', error);
+      alert('Failed to add event');
+    }
   };
 
-  const handleRegister = (eventId: string, name: string, email: string) => {
+  const handleUpdateEvent = async (id: string, eventData: Omit<Event, 'id'>) => {
+    const { error } = await supabase
+      .from('events')
+      .update(eventData)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating event:', error);
+      alert('Failed to update event');
+    }
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    const { error } = await supabase
+      .from('events')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting event:', error);
+      alert('Failed to delete event');
+    }
+  };
+
+  const handleRegister = async (eventId: string, name: string, email: string) => {
     const existingReg = registrations.find(
       r => r.event_id === eventId && r.student_email === email
     );
@@ -36,16 +107,32 @@ function App() {
       return;
     }
 
-    const newRegistration: Registration = {
-      id: crypto.randomUUID(),
-      event_id: eventId,
-      student_name: name,
-      student_email: email,
-      registered_at: new Date().toISOString()
-    };
-    setRegistrations([...registrations, newRegistration]);
-    alert('Registration successful!');
+    const { error } = await supabase
+      .from('registrations')
+      .insert([{
+        event_id: eventId,
+        student_name: name,
+        student_email: email
+      }]);
+
+    if (error) {
+      console.error('Error registering:', error);
+      alert('Failed to register for event');
+    } else {
+      alert('Registration successful!');
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading events...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
