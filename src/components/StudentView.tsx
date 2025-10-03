@@ -14,11 +14,15 @@ export default function StudentView({ events, registrations, onRegister }: Stude
   const [email, setEmail] = useState('');
 
   const upcomingEvents = events.filter(event => {
-    const eventDate = new Date(event.event_date);
+    const eventDate = new Date(event.event_date + 'T00:00:00');
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return eventDate >= today;
-  }).sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime());
+  }).sort((a, b) => {
+    const dateA = new Date(a.event_date + 'T00:00:00');
+    const dateB = new Date(b.event_date + 'T00:00:00');
+    return dateA.getTime() - dateB.getTime();
+  });
 
   const isRegistered = (eventId: string) => {
     return registrations.some(r => r.event_id === eventId && r.student_email === email);
