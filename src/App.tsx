@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Shield, Users } from 'lucide-react';
+import { Shield, Users, LogOut } from 'lucide-react';
 import AdminPanel from './components/AdminPanel';
 import StudentView from './components/StudentView';
+import HomePage from './components/HomePage';
 import { Event, Registration } from './types';
 import { supabase } from './lib/supabase';
+import { useAuth } from './contexts/AuthContext';
 
 function App() {
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { user, profile, signIn, signUp, signOut } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(false);
 
   useEffect(() => {
     fetchEvents();
@@ -123,6 +126,28 @@ function App() {
     }
   };
 
+  const handleLogin = async (email: string, password: string) => {
+    setAuthLoading(true);
+    try {
+      await signIn(email, password);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleSignup = async (email: string, password: string, fullName: string, role: 'student' | 'admin') => {
+    setAuthLoading(true);
+    try {
+      await signUp(email, password, fullName, role);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  if (!user) {
+    return <HomePage onLogin={handleLogin} onSignup={handleSignup} loading={authLoading} />;
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
@@ -134,32 +159,43 @@ function App() {
     );
   }
 
+  const isAdmin = profile?.role === 'admin';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-800">College Events</h1>
-            <button
-              onClick={() => setIsAdmin(!isAdmin)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">College Events</h1>
+              <p className="text-sm text-gray-600">Welcome, {profile?.full_name}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
                 isAdmin
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              {isAdmin ? (
-                <>
-                  <Shield size={20} />
-                  Admin Mode
-                </>
-              ) : (
-                <>
-                  <Users size={20} />
-                  Student View
-                </>
-              )}
-            </button>
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-blue-100 text-blue-700'
+              }`}>
+                {isAdmin ? (
+                  <>
+                    <Shield size={20} />
+                    Admin
+                  </>
+                ) : (
+                  <>
+                    <Users size={20} />
+                    Student
+                  </>
+                )}
+              </div>
+              <button
+                onClick={signOut}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+              >
+                <LogOut size={20} />
+                Sign Out
+              </button>
+            </div>
           </div>
         </div>
       </nav>
