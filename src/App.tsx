@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Shield, Users, LogOut } from 'lucide-react';
+import { Shield, Users, LogOut, Moon, Sun } from 'lucide-react';
 import AdminPanel from './components/AdminPanel';
 import StudentView from './components/StudentView';
 import HomePage from './components/HomePage';
 import { Event, Registration } from './types';
 import { supabase } from './lib/supabase';
 import { useAuth } from './contexts/AuthContext';
+import { useTheme } from './contexts/ThemeContext';
 
 function App() {
   const { user, profile, signIn, signUp, signOut } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const [events, setEvents] = useState<Event[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,10 +152,10 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center transition-colors duration-300">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading events...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading events...</p>
         </div>
       </div>
     );
@@ -162,19 +164,26 @@ function App() {
   const isAdmin = profile?.role === 'admin';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <nav className="bg-white shadow-sm border-b border-gray-200">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
+      <nav className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">College Events</h1>
-              <p className="text-sm text-gray-600">Welcome, {profile?.full_name}</p>
+            <div className="animate-slide-in">
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-white">College Events</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Welcome, {profile?.full_name}</p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+            <div className="flex items-center gap-3 animate-fade-in">
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-300 transform hover:scale-110"
+                title={isDark ? 'Light Mode' : 'Dark Mode'}
+              >
+                {isDark ? <Sun size={20} className="text-yellow-400" /> : <Moon size={20} className="text-gray-700" />}
+              </button>
+              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 ${
                 isAdmin
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-blue-100 text-blue-700'
+                  ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                  : 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
               }`}>
                 {isAdmin ? (
                   <>
@@ -190,7 +199,7 @@ function App() {
               </div>
               <button
                 onClick={signOut}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-800 transition-all duration-300 transform hover:scale-105"
               >
                 <LogOut size={20} />
                 Sign Out
